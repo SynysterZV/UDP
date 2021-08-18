@@ -1,5 +1,22 @@
 const { prompt } = require('inquirer')
+const { Signale } = require('signale')
 const dgram = require('dgram');
+
+const signale = new Signale({
+    scope: 'UDP',
+    types: {
+        listening: {
+            badge: '✓',
+            label: 'LISTENING',
+            color: 'green'
+        },
+        received: {
+            badge: '→',
+            label: 'RECEIVED',
+            color: 'yellow'
+        }
+    }
+})
 
 prompt([
     {
@@ -14,7 +31,7 @@ prompt([
 
 class UDP {
     constructor(type) {
-        this.sends = ''
+        this.sends = []
         type == 'Server' ? this.startServer() : this.startClient()
     }
 
@@ -30,12 +47,13 @@ class UDP {
         ])
 
         socket
-        .on('listening', () => console.log(`Server listening on port ${port}`))
+        .on('listening', () => { console.clear(); signale.listening(`Server listening on port ${port}\n`) })
         .on('message', (d,r) => {
-            const i = `Recieved: ${d.toString()}\n`
-            console.log(`[${r.address}] ${i}`)
+            signale
+            .scope(r.address)
+            .received(d.toString())
 
-            socket.send(i, r.port, r.address)
+            socket.send(d.toString(), r.port, r.address)
         })
         .bind(port)
     }
@@ -61,7 +79,7 @@ class UDP {
         this.ip = ip
 
         this.client.bind(this.port + 1, () => this.client.setBroadcast(true))
-        this.client.on('message', i => this.sends += i)
+        this.client.on('message', i => this.sends.push(i.toString()) )
         this.client.on('error', console.log)
 
         this.sendLoop()
@@ -79,7 +97,7 @@ class UDP {
         this.client.send(input, this.port, this.ip)
 
         console.clear()
-        console.log(this.sends)
+        this.sends.forEach(i => signale.received(i) )
         this.sendLoop()
     }
 }
