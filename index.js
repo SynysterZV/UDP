@@ -42,7 +42,13 @@ class UDP {
             {
                 name: 'port',
                 type: 'number',
-                message: 'Port Number:'
+                message: 'Port Number:',
+                default: 8080,
+                validate(i) {
+                    let done = this.async()
+                    if(i < 1024 || i > 65525) return done('You need to provide a valid port (1024-65535)')
+                    else done(null, true)
+                }
             }
         ])
 
@@ -66,12 +72,24 @@ class UDP {
             {
                 name: 'ip',
                 type: 'input',
-                message: 'IP address:'
+                message: 'IP address:',
+                default: 'localhost',
+                validate(i) {
+                    let done = this.async()
+                    if(!i.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})|localhost/)) return done('You need to provide a valid ip')
+                    else done(null, true)
+                }
             },
             {
                 name: 'port',
                 type: 'number',
-                message: 'Port Number:'
+                message: 'Port Number:',
+                default: 8080,
+                validate(i) {
+                    let done = this.async()
+                    if(i < 1024 || i > 65525) return done('You need to provide a valid port (1024-65535)')
+                    else done(null, true)
+                }
             }
         ])
 
