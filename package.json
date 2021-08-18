@@ -1,0 +1,27 @@
+{
+  "name": "udptest",
+  "version": "1.0.0",
+  "description": "UDP proj for my networking class",
+  "main": "index.js",
+  "bin": "index.js",
+  "scripts": {
+    "build": "pkg ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "inquirer": "^8.1.2"
+  },
+  "pkg": {
+    "scripts": "index.js",
+    "targets": [
+      "node14-linux",
+      "node14-win"
+    ],
+    "outputPath": "dist"
+  },
+  "devDependencies": {
+    "pkg": "^5.3.1"
+  }
+}
