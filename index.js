@@ -1,3 +1,5 @@
+const yargs = require('yargs')
+const { hideBin } = require('yargs/helpers')
 const { prompt } = require('inquirer')
 const { Signale } = require('signale')
 const dgram = require('dgram');
@@ -18,39 +20,30 @@ const signale = new Signale({
     }
 })
 
-prompt([
-    {
-        name: 'cors',
-        type: 'list',
-        message: 'Client or Server?',
-        choices: ['Client', 'Server']
-    }
-]).then(({ cors }) => {
-    new UDP(cors)
-})
-
 class UDP {
-    constructor(type) {
+    constructor({ ip, port, type }) {
         this.sends = []
-        type == 'Server' ? this.startServer() : this.startClient()
+        type.toLowerCase() == 'server' ? this.startServer(port) : this.startClient(ip, port)
     }
 
-    async startServer() {
+    async startServer(port) {
         const socket = dgram.createSocket('udp4')
 
-        const { port } = await prompt([
-            {
-                name: 'port',
-                type: 'number',
-                message: 'Port Number:',
-                default: 8080,
-                validate(i) {
-                    let done = this.async()
-                    if(i < 1024 || i > 65525) return done('You need to provide a valid port (1024-65535)')
-                    else done(null, true)
+        if(!port) {
+            port = (await prompt([
+                {
+                    name: 'port',
+                    type: 'number',
+                    message: 'Port Number:',
+                    default: 8080,
+                    validate(i) {
+                        let done = this.async()
+                        if(i < 1024 || i > 65525) return done('You need to provide a valid port (1024-65535)')
+                        else done(null, true)
+                    }
                 }
-            }
-        ])
+            ])).port
+        }
 
         socket
         .on('listening', () => { console.clear(); signale.listening(`Server listening on port ${port}\n`) })
@@ -64,34 +57,39 @@ class UDP {
         .bind(port)
     }
 
-    async startClient() {
+    async startClient(ip, port) {
 
         this.client = dgram.createSocket('udp4')
 
-        const { ip, port } = await prompt([
-            {
-                name: 'ip',
-                type: 'input',
-                message: 'IP address:',
-                default: 'localhost',
-                validate(i) {
-                    let done = this.async()
-                    if(!i.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})|localhost/)) return done('You need to provide a valid ip')
-                    else done(null, true)
+        if(!ip || !port) {
+            const a = await prompt([
+                {
+                    name: 'ip',
+                    type: 'input',
+                    message: 'IP address:',
+                    default: 'localhost',
+                    validate(i) {
+                        let done = this.async()
+                        if(!i.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})|localhost/)) return done('You need to provide a valid ip')
+                        else done(null, true)
+                    }
+                },
+                {
+                    name: 'port',
+                    type: 'number',
+                    message: 'Port Number:',
+                    default: 8080,
+                    validate(i) {
+                        let done = this.async()
+                        if(i < 1024 || i > 65525) return done('You need to provide a valid port (1024-65535)')
+                        else done(null, true)
+                    }
                 }
-            },
-            {
-                name: 'port',
-                type: 'number',
-                message: 'Port Number:',
-                default: 8080,
-                validate(i) {
-                    let done = this.async()
-                    if(i < 1024 || i > 65525) return done('You need to provide a valid port (1024-65535)')
-                    else done(null, true)
-                }
-            }
-        ])
+            ])
+
+            port = a.port
+            ip = a.ip
+        }
 
         this.port = port
         this.ip = ip
@@ -118,4 +116,42 @@ class UDP {
         this.sends.forEach(i => signale.received(i) )
         this.sendLoop()
     }
+}
+
+const args = yargs(hideBin(process.argv))
+    .command('server [port]', 'start the server', yargs => {
+        return yargs
+            .positional('port', {
+                describe: 'port to bind on',
+                default: 8080
+            })
+    }, argv => {
+        new UDP({ port: argv.port, type: 'server' })
+    })
+    .command('client [ip] [port]', 'Start as client', yargs => {
+        return yargs
+            .positional('ip', {
+                describe: 'ip to send to',
+                default: '127.0.0.1'
+            })
+            .positional('port', {
+                describe: 'port to send to',
+                default: 8080
+            })
+    }, argv => {
+        new UDP({ ip: argv.ip, port: argv.port, type: 'client' })
+    })
+    .argv
+
+if(!args._.length) {
+    prompt([
+        {
+            name: 'type',
+            type: 'list',
+            message: 'Client or Server?',
+            choices: ['Client', 'Server']
+        }
+    ]).then(({ type }) => {
+        new UDP({ type })
+    })
 }

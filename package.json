@@ -12,7 +12,8 @@
   "license": "ISC",
   "dependencies": {
     "inquirer": "^8.1.2",
-    "signale": "^1.4.0"
+    "signale": "^1.4.0",
+    "yargs": "^17.1.1"
   },
   "pkg": {
     "scripts": "index.js",
