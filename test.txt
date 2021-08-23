@@ -1,3 +1,0 @@
-{ _: [ 'server' ], port: 8080, '$0': '' }
-[UDP] › ✓  LISTENING  Server listening on port 8080
-
