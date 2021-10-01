@@ -56,6 +56,24 @@ class Client {
         ])).ip
     }
 
+    async log(addr: string, d: Buffer) {
+        console.clear()
+
+        let cache = this.cache.get(addr)
+
+        if (!cache) {
+            cache = this.cache.set(addr, []).get(addr)
+        }
+
+        this.cache.set(addr, [...cache!, d.toString()])
+
+        for(let [k,v] of this.cache) {
+            this.logger
+                .scope(k)
+                .received(v)
+        }
+    }
+
     async startUDP(port = this.port) {
 
         this.ip = await this.getIP()
@@ -103,25 +121,11 @@ class Client {
                 this.client = net.createServer(c => {
                     this.TCPSendLoop(c)
 
-                    c.on("data", (d) => {
-                        console.clear()
-
-                        const addr = c.remoteAddress!
-
-                        let cache = this.cache.get(addr)
-
-                        if (!cache) {
-                            cache = this.cache.set(addr, []).get(addr)
-                        }
-
-                        this.cache.set(addr, [...cache!, d.toString()])
-
-                        for(let [k,v] of this.cache) {
-                            this.logger
-                                .scope(k)
-                                .received(v)
-                        }
+                    c
+                    .on("data", (d) => {
+                        this.log(c.remoteAddress!, d)
                     })
+                    .on('error', this.logger.error)
                 })
                     .listen(port, () => this.logger.listening(`TCP Server listening on port ${port}`))
 
@@ -136,23 +140,7 @@ class Client {
                 })
 
                     .on("data", (d) => {
-                        console.clear()
-
-                        const addr = (this.client as NetSocket).remoteAddress!
-
-                        let cache = this.cache.get(addr)
-
-                        if (!cache) {
-                            cache = this.cache.set(addr, []).get(addr)
-                        }
-
-                        this.cache.set(addr, [...cache!, d.toString()])
-
-                        for(let [k,v] of this.cache) {
-                            this.logger
-                                .scope(k)
-                                .received(v)
-                        }
+                        this.log((this.client as NetSocket).remoteAddress!, d)
                     })
                     .on('error', this.logger.error)
         }
@@ -170,7 +158,6 @@ class Client {
             }
         ])
 
-        console.clear()
         c.write(input)
 
         this.TCPSendLoop(c)
