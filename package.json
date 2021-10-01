@@ -1,5 +1,5 @@
 {
-  "name": "udptest",
+  "name": "udptcp",
   "version": "1.0.0",
   "description": "UDP proj for my networking class",
   "main": "dist/index.js",

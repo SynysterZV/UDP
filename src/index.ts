@@ -15,7 +15,7 @@ class Client {
     public client: Socket | NetSocket | Server | null
     public logger: Signale<'listening' | 'received'>
 
-    public port: number
+    public sendPort: number
     public ip: string
     public type: "TCP" | "UDP"
 
@@ -23,7 +23,7 @@ class Client {
         this.cache = new Map()
         this.client = null
 
-        this.port = 8080
+        this.sendPort = 8080
         this.ip = ''
         this.type = "UDP"
 
@@ -74,40 +74,34 @@ class Client {
         }
     }
 
-    async startUDP(port = this.port) {
+    async startUDP() {
 
-        this.ip = await this.getIP()
+        
+        let port = (await prompt([
+            {
+                name: 'port',
+                type: 'number',
+                message: 'Listen Port Number:',
+                default: 8080,
+            }
+        ])).port
+
+        if(!this.ip) this.ip = await this.getIP() 
 
         this.client = dgram.createSocket('udp4')
 
         this.client
-            .on('listening', () => this.logger.scope(this.ip).listening(`Server listening on port ${this.port}\n`))
-            .on('message', (d,r) => {
-                console.clear()
-                let cache = this.cache.get(r.address)
-
-                if (!cache) {
-                    cache = this.cache.set(r.address, []).get(r.address)
-                }
-
-                this.cache.set(r.address, [...cache!, d.toString()])
-
-                for(let [k,v] of this.cache) {
-                    this.logger
-                        .scope(k)
-                        .received(v)
-                }
+            .on('listening', () => {
+                this.logger.scope(this.ip).listening(`Server listening on port ${port}\n`)
+                this.sendLoop(this.sendPort)
             })
-            .on('error', e => {
-                (this.client as Socket).close()
-                this.startUDP(port + 1)
+            .on('message', (d,r) => {
+                this.log(r.address, d)
             })
             .bind(port)
-            
-        this.sendLoop()
     }
 
-    async startTCP(port = this.port) {
+    async startTCP() {
         let { type } = await prompt([
             {
                 name: 'type',
@@ -118,6 +112,7 @@ class Client {
 
         switch(type) {
             case "Server":
+
                 this.client = net.createServer(c => {
                     this.TCPSendLoop(c)
 
@@ -127,7 +122,8 @@ class Client {
                     })
                     .on('error', this.logger.error)
                 })
-                    .listen(port, () => this.logger.listening(`TCP Server listening on port ${port}`))
+                    // @ts-ignore
+                    .listen(() => this.logger.listening(`Server started on port ${this.client?.address().port}`))
 
                 break;
             
@@ -135,7 +131,7 @@ class Client {
 
                 this.ip = await this.getIP()
 
-                this.client = net.connect({ host: this.ip, port: this.port }, () => {
+                this.client = net.connect({ host: this.ip, port: this.sendPort }, () => {
                     this.TCPSendLoop(this.client as NetSocket)
                 })
 
@@ -163,7 +159,7 @@ class Client {
         this.TCPSendLoop(c)
     }
 
-    async sendLoop() {
+    async sendLoop(port: number) {
         
         const { input } = await prompt([
             {
@@ -173,33 +169,30 @@ class Client {
             }
         ])
 
-        ;(this.client as Socket).send(input, this.port, this.ip)
-        this.sendLoop()
+        ;(this.client as Socket).send(input, port, this.ip)
+        this.sendLoop(port)
     }
 
-    async init({ port, type }: Init) {
+    async init() {
 
-        if (!type) {
-            this.type = (await prompt([
-                {
-                    name: 'type',
-                    type: 'list',
-                    message: 'TCP or UDP?',
-                    choices: ['TCP', 'UDP']
-                }
-            ])).type
-        }
+        this.type = (await prompt([
+            {
+                name: 'type',
+                type: 'list',
+                message: 'TCP or UDP?',
+                choices: ['TCP', 'UDP']
+            }
+        ])).type
 
-        if (!port) {
-            this.port = (await prompt([
-                {
-                    name: 'port',
-                    type: 'number',
-                    message: 'Port Number:',
-                    default: 8080,
-                }
-            ])).port
-        }
+        this.sendPort = (await prompt([
+            {
+                name: 'port',
+                type: 'number',
+                message: 'Send Port Number:',
+                default: 8080,
+            }
+        ])).port
+
 
         this.type == 'UDP'
         ? this.startUDP()
@@ -207,4 +200,4 @@ class Client {
     }
 }
 
-new Client().init({})
+new Client().init()
