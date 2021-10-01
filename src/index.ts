@@ -56,6 +56,28 @@ class Client {
         ])).ip
     }
 
+    async getSendPort() {
+        return (await prompt([
+            {
+                name: 'port',
+                type: 'number',
+                message: 'Send Port Number:',
+                default: 8080,
+            }
+        ])).port
+    }
+
+    async getListenPort() {
+        return (await prompt([
+            {
+                name: 'port',
+                type: 'number',
+                message: 'Listen Port Number:',
+                default: 8080,
+            }
+        ])).port
+    }
+
     async log(addr: string, d: Buffer) {
         console.clear()
 
@@ -76,15 +98,8 @@ class Client {
 
     async startUDP() {
 
-        
-        let port = (await prompt([
-            {
-                name: 'port',
-                type: 'number',
-                message: 'Listen Port Number:',
-                default: 8080,
-            }
-        ])).port
+        const port = await this.getListenPort()
+        const sendPort = await this.getSendPort()
 
         if(!this.ip) this.ip = await this.getIP() 
 
@@ -93,7 +108,7 @@ class Client {
         this.client
             .on('listening', () => {
                 this.logger.scope(this.ip).listening(`Server listening on port ${port}\n`)
-                this.sendLoop(this.sendPort)
+                this.sendLoop(sendPort)
             })
             .on('message', (d,r) => {
                 this.log(r.address, d)
@@ -129,9 +144,11 @@ class Client {
             
             case "Client":
 
+                const port = await this.getSendPort()
                 this.ip = await this.getIP()
+                
 
-                this.client = net.connect({ host: this.ip, port: this.sendPort }, () => {
+                this.client = net.connect({ host: this.ip, port }, () => {
                     this.TCPSendLoop(this.client as NetSocket)
                 })
 
@@ -183,15 +200,6 @@ class Client {
                 choices: ['TCP', 'UDP']
             }
         ])).type
-
-        this.sendPort = (await prompt([
-            {
-                name: 'port',
-                type: 'number',
-                message: 'Send Port Number:',
-                default: 8080,
-            }
-        ])).port
 
 
         this.type == 'UDP'
