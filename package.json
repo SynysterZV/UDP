@@ -2,10 +2,11 @@
   "name": "udptest",
   "version": "1.0.0",
   "description": "UDP proj for my networking class",
-  "main": "index.js",
-  "bin": "index.js",
+  "main": "dist/index.js",
+  "bin": "dist/index.js",
   "scripts": {
-    "build": "pkg ."
+    "build": "tsc",
+    "package": "pkg ."
   },
   "keywords": [],
   "author": "",
@@ -16,14 +17,17 @@
     "yargs": "^17.1.1"
   },
   "pkg": {
-    "scripts": "index.js",
+    "scripts": "dist/index.js",
     "targets": [
       "node14-linux",
       "node14-win"
     ],
-    "outputPath": "dist"
+    "outputPath": "bin"
   },
   "devDependencies": {
+    "@types/inquirer": "^8.1.3",
+    "@types/signale": "^1.4.2",
+    "@types/yargs": "^17.0.3",
     "pkg": "^5.3.1"
   }
 }
